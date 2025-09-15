@@ -3,10 +3,10 @@ Bass-to-Arduino Bridge
 ----------------------
 
 This Python program:
-1. Detects if an Arduino (Uno/compatible) is connected via USB.
+1. Detects if an Arduino (Uno/other compatible devices) is connected via USB.
 2. Opens the system audio input (e.g., speaker loopback, mic, etc.) using PyAudio.
 3. Captures real-time audio chunks, converts them into NumPy arrays.
-4. Extracts the "bass" frequency band (50–500 Hz) using FFT.
+4. Extracts the "bass" frequency band (50–200 Hz) using FFT.
 5. Computes the average energy of that band, normalizes to 0–255.
 6. Sends the value over Serial to the Arduino, where it can be used for PWM/motor control.
 
@@ -35,11 +35,11 @@ def find_arduino():
     Returns: port string (e.g., "COM3" or "/dev/ttyACM0") or None if not found.
     """
     ports = list(serial.tools.list_ports.comports())
-    for p in ports:
+    for port in ports:
         # Many Uno R3 clones have "Arduino" or "wchusbserial" in description
-        if "Arduino" in p.description or "wchusbserial" in p.device.lower() or "ttyACM" in p.device or "Arduino" in str(
-                p.manufacturer):
-            return p.device
+        if "Arduino" in port.description or "wchusbserial" in port.device.lower() or "ttyACM" in port.device or "Arduino" in str(
+                port.manufacturer):
+            return port.device
     return None
 
 
@@ -70,7 +70,6 @@ gain = 0.01
 
 p = pyaudio.PyAudio()
 
-p = pyaudio.PyAudio()
 info = p.get_host_api_info_by_index(0)
 numdevices = info.get('deviceCount')
 
