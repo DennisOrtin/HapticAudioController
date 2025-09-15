@@ -95,7 +95,7 @@ print("🎵 Capturing audio... press Ctrl+C to stop.")
 # -----------------------------
 try:
     prevVal = 0
-    while True and time.time() % 5:
+    while True:
         # --- Read raw audio ---
         data = stream.read(CHUNK, exception_on_overflow=False)
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
