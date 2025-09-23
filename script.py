@@ -66,7 +66,7 @@ gainTimer = 0
 timerGainMaxHigh = 60
 timerGainMaxMid = 120
 timerGainMaxLow = 90
-gain = 0.01
+gain = 0.006
 
 p = pyaudio.PyAudio()
 
@@ -78,7 +78,9 @@ for i in range(0, numdevices):
         print("Input Device id ", i, " - ", p.get_device_info_by_host_api_device_index(0, i).get('name'))
 
 input_device_id = int(input("Enter ID: "))
-
+adaptiveGain = str(input("Would you like adaptive gain? Y/N")).capitalize() == "Y"
+if not adaptiveGain:
+    gain = float(input(str("What gain would you like? Default: " + str(gain) + " ")))
 # You may need to set input_device_index to your loopback device
 stream = p.open(format=pyaudio.paInt16,
                 channels=1,  # mono
@@ -109,31 +111,33 @@ try:
         bass_energy = magnitude[mask].mean()
         # --- Normalize to 0–255 ---
         # Scale factor depends on your system volume; tune "gain" until motor feels right
-        val = int(np.clip(bass_energy * gain, 0, 255))
-        prevVal = val
-        if prevVal < 205 < val:
-            gainTimer = 0
-        elif val < 195 < prevVal:
-            gainTimer = 0
-        if val > 230:
-            gainTimer += 1
-            if gainTimer > timerGainMaxHigh:
-                gain -= 0.0008*(float(gainTimer*2)/timerGainMaxHigh)
-        elif 205 < val < 231:
-            gainTimer += 1
-            if gainTimer > timerGainMaxHigh:
-                gain -= 0.0004*(float(gainTimer*2)/timerGainMaxHigh)
-        elif 80 < val < 195:
-            gainTimer +=1
-            if gainTimer > timerGainMaxMid:
-                gain+=0.0005
-        elif bass_energy > 50 and val < 81:
-            gainTimer += 1
-            if gainTimer > timerGainMaxLow:
-                gain += 0.009
+        if adaptiveGain:
+            val = int(np.clip(bass_energy * gain, 0, 255))
+            prevVal = val
+            if prevVal < 205 < val:
+                gainTimer = 0
+            elif val < 195 < prevVal:
+                gainTimer = 0
+            if val > 230:
+                gainTimer += 1
+                if gainTimer > timerGainMaxHigh:
+                    gain -= 0.0008*(float(gainTimer*2)/timerGainMaxHigh)
+            elif 205 < val < 231:
+                gainTimer += 1
+                if gainTimer > timerGainMaxHigh:
+                    gain -= 0.0004*(float(gainTimer*2)/timerGainMaxHigh)
+            elif 80 < val < 195:
+                gainTimer +=1
+                if gainTimer > timerGainMaxMid:
+                    gain+=0.0005
+            elif bass_energy > 50 and val < 81:
+                gainTimer += 1
+                if gainTimer > timerGainMaxLow:
+                    gain += 0.009
+            else:
+                gainTimer = 0
         else:
-            gainTimer = 0
-        val = int(np.clip(bass_energy * gain, 0, 255))
+            val = int(np.clip(bass_energy * gain, 0, 255))
         # --- Send byte to Arduino ---
         print("Final " + str(val) + " Timer: " + str(gainTimer) + " Gain: " + str(gain))
         ser.write((val.to_bytes(1, byteorder='big')))
